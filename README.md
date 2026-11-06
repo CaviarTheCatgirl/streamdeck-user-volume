@@ -2,6 +2,8 @@
 
 Turn one person's Discord volume up and down from your Elgato Stream Deck — a **key** with their avatar and live volume, or a **Stream Deck + dial** that works like a proper volume knob.
 
+This is the **Stream Deck side**. It needs the [Vencord User Volume Deck](https://github.com/CaviarTheCatgirl/vencord-user-volume) plugin in Discord.
+
 ![Stream Deck](https://img.shields.io/badge/Stream%20Deck-Plugin-blue)
 ![Stream Deck +](https://img.shields.io/badge/Stream%20Deck%20%2B-dials-blueviolet)
 ![Version](https://img.shields.io/badge/version-1.0.0-green)
@@ -28,14 +30,14 @@ Turn one person's Discord volume up and down from your Elgato Stream Deck — a 
 
 - **Elgato Stream Deck** software **6.9** or newer (Windows 10+ / macOS 12+)
 - Any Stream Deck for keys; a **Stream Deck +** for dials
-- **Discord desktop app** with **[Vencord](https://vencord.dev/)** built from source
-- The **[Vencord User Volume Deck](https://github.com/CaviarTheCatgirl/vencord-user-volume)** plugin installed and enabled
+- **Discord desktop app** with [**Vencord**](https://vencord.dev/) built from source
+- The [**Vencord User Volume Deck**](https://github.com/CaviarTheCatgirl/vencord-user-volume) plugin installed and enabled
 
 ## Installation
 
 ### Option 1: Direct download (recommended)
 
-1. Download the latest `com.darkside1305.user-volume.streamDeckPlugin` from [Releases](https://github.com/CaviarTheCatgir/streamdeck-user-volume/releases).
+1. Download the latest `com.darkside1305.user-volume.streamDeckPlugin` from [Releases](https://github.com/CaviarTheCatgirl/streamdeck-user-volume/releases/latest).
 2. Double-click it. The Stream Deck software installs it.
 3. **User Volume** appears under **Discord** in the actions list.
 
@@ -49,7 +51,7 @@ Turn one person's Discord volume up and down from your Elgato Stream Deck — a 
 
 ## Setup
 
-1. **Install the Vencord plugin first**: follow the [Vencord User Volume Deck guide](https://github.com/CaviarTheCatgir/vencord-user-volume), then restart Discord fully.
+1. **Install the Vencord plugin first**: follow the [Vencord User Volume Deck guide](https://github.com/CaviarTheCatgirl/vencord-user-volume#installation), then restart Discord fully.
 2. **Drag "User Volume"** onto a key, or onto a dial on a Stream Deck +.
 3. **Pick a person** in the settings panel:
    - Tap someone from the suggestions, or
@@ -134,6 +136,7 @@ Crossing 100 % while turning snaps there briefly. Keep turning past it a moment 
 ## Troubleshooting
 
 ### Keys show "Discord off"
+
 **Cause**: The plugin can't reach Discord.
 
 **Solutions**:
@@ -143,30 +146,36 @@ Crossing 100 % while turning snaps there briefly. Keep turning past it a moment 
 4. Make sure the ports match on both sides. Press ↻ next to the status line to reconnect right away.
 
 ### Pressing a key shows a ⚠ alert
+
 No person is picked yet, or Discord isn't reachable. Open the key's settings to see which.
 
 ### Keys show "Pick a person"
+
 Open the key's settings and choose someone.
 
 ### No suggestions in the list
+
 Suggestions load once Discord is connected. You can always paste a user ID; search also covers your friends.
 
 ### The maximum is only 200 %
+
 Enable **VolumeBooster** in Vencord and raise its multiplier. The new maximum shows up immediately.
 
 ### Tapping feels slow
+
 A single tap waits for the double-tap window. Lower **Double-tap window**, or set **Double tap** to *Nothing* and use a shorter window.
 
 ## Development
 
 ### Prerequisites
+
 - Node.js 20+ and npm
 - [Elgato Stream Deck CLI](https://docs.elgato.com/streamdeck/cli/intro) for packing (`npm i -g @elgato/cli`)
 
 ### Setup
 
 ```bash
-git clone https://github.com/CaviarTheCatgir/streamdeck-user-volume.git
+git clone https://github.com/CaviarTheCatgirl/streamdeck-user-volume.git
 cd streamdeck-user-volume
 
 npm ci
@@ -211,11 +220,11 @@ streamdeck-user-volume/
 
 ### Communication
 
-- **Transport**: HTTP on `127.0.0.1:37321`. Browsers are refused by the Discord side ([details](https://github.com/CaviarTheCatgir/vencord-user-volume#security)).
+- **Transport**: HTTP on `127.0.0.1:37321`. Browsers are refused by the Discord side ([details](https://github.com/CaviarTheCatgirl/vencord-user-volume#security)).
 - **Live updates**: one **Server-Sent-Events** stream. Discord pushes a finished image for every visible key / dial whenever something changes (volume, mute, speaking, avatar), so nothing is polled.
 - **Images are drawn in Discord** (canvas) and only displayed here; the touch strip is a single 200 × 100 pixmap.
 - **Commands**: small JSON calls: `/adjust` (relative, used by holds and dials), `/set`, `/mute`, `/suggestions`, `/user`.
-- Full API: [Vencord plugin README](https://github.com/CaviarTheCatgir/vencord-user-volume#api-reference).
+- Full API: [Vencord plugin README](https://github.com/CaviarTheCatgirl/vencord-user-volume#api-reference).
 
 ### Smoothness
 
@@ -230,11 +239,11 @@ MIT
 
 ## Credits
 
-**Created by**: DarkSide1305
+**Created by**: CaviarTheCatgirl
 
 **Related projects**:
-- [Vencord User Volume Deck](https://github.com/CaviarTheCatgir/vencord-user-volume): required Discord plugin
-- [Stream Deck Krisp Toggle](https://github.com/CaviarTheCatgir/streamdeck-krisp-toggle): Krisp on a key
+- [Vencord User Volume Deck](https://github.com/CaviarTheCatgirl/vencord-user-volume): required Discord plugin
+- [Stream Deck Krisp Toggle](https://github.com/CaviarTheCatgirl/streamdeck-krisp-toggle): Krisp on a key
 
 **Built with**:
 - [Elgato Stream Deck SDK](https://docs.elgato.com/streamdeck/sdk/introduction/getting-started) (`@elgato/streamdeck` v2)
@@ -242,12 +251,13 @@ MIT
 
 ## Support
 
-- 🐛 **Bug reports**: [Open an issue](https://github.com/CaviarTheCatgir/streamdeck-user-volume/issues)
-- 💡 **Feature requests**: [Open an issue](https://github.com/CaviarTheCatgir/streamdeck-user-volume/issues)
+- 🐛 **Bug reports**: [Open an issue](https://github.com/CaviarTheCatgirl/streamdeck-user-volume/issues)
+- 💡 **Feature requests**: [Open an issue](https://github.com/CaviarTheCatgirl/streamdeck-user-volume/issues)
 
 ## Changelog
 
 ### v1.0.0 (initial release)
+
 - ✨ User Volume action for keys and Stream Deck + dials
 - ⬆️⬇️ Hold to raise, double-tap-and-hold to lower, with gentle acceleration
 - 🎛️ Speed-sensitive dial with coarse mode while pressed
