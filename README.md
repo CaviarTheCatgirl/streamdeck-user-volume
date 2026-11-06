@@ -37,14 +37,14 @@ This is the **Stream Deck side**. It needs the [Vencord User Volume Deck](https:
 
 ### Option 1: Direct download (recommended)
 
-1. Download the latest `com.darkside1305.user-volume.streamDeckPlugin` from [Releases](https://github.com/CaviarTheCatgirl/streamdeck-user-volume/releases/latest).
+1. Download the latest `com.caviarthecatgirl.user-volume.streamDeckPlugin` from [Releases](https://github.com/CaviarTheCatgirl/streamdeck-user-volume/releases/latest).
 2. Double-click it. The Stream Deck software installs it.
 3. **User Volume** appears under **Discord** in the actions list.
 
 ### Option 2: Manual
 
 1. Download and extract the latest release.
-2. Copy the `com.darkside1305.user-volume.sdPlugin` folder to:
+2. Copy the `com.caviarthecatgirl.user-volume.sdPlugin` folder to:
    - **Windows**: `%APPDATA%\Elgato\StreamDeck\Plugins\`
    - **macOS**: `~/Library/Application Support/com.elgato.StreamDeck/Plugins/`
 3. Restart the Stream Deck software.
@@ -179,21 +179,21 @@ git clone https://github.com/CaviarTheCatgirl/streamdeck-user-volume.git
 cd streamdeck-user-volume
 
 npm ci
-npm run build     # bundles src/ → com.darkside1305.user-volume.sdPlugin/bin/plugin.js
+npm run build     # bundles src/ → com.caviarthecatgirl.user-volume.sdPlugin/bin/plugin.js
 npm run watch     # rebuild on change + restart the plugin in Stream Deck
 ```
 
 Link the plugin into Stream Deck while developing:
 
 ```bash
-streamdeck link com.darkside1305.user-volume.sdPlugin
+streamdeck link com.caviarthecatgirl.user-volume.sdPlugin
 ```
 
 ### Building a release
 
 ```bash
 npm run build
-streamdeck pack com.darkside1305.user-volume.sdPlugin
+streamdeck pack com.caviarthecatgirl.user-volume.sdPlugin
 ```
 
 ### Project structure
@@ -206,7 +206,7 @@ streamdeck-user-volume/
 │   ├── fallback.ts              # images for "Pick a person" / "Discord off" / "Loading…"
 │   └── actions/
 │       └── user-volume.ts       # key gestures, ramps, dial acceleration, 100 % detent
-├── com.darkside1305.user-volume.sdPlugin/
+├── com.caviarthecatgirl.user-volume.sdPlugin/
 │   ├── manifest.json
 │   ├── layouts/user-volume.json # touch strip: one 200×100 image
 │   ├── ui/user-volume.html      # settings panel (person picker + options)

@@ -167,7 +167,7 @@ interface Inst {
     rotatedWhilePressed: boolean;
 }
 
-@action({ UUID: "com.darkside1305.user-volume.volume" })
+@action({ UUID: "com.caviarthecatgirl.user-volume.volume" })
 export class UserVolumeAction extends SingletonAction<Settings> {
     private insts = new Map<string, Inst>();
 
