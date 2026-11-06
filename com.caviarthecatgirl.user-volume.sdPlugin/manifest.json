@@ -1,0 +1,60 @@
+{
+	"Name": "Discord User Volume",
+	"Version": "1.0.0.0",
+	"Author": "CaviarTheCatgirl",
+	"Actions": [
+		{
+			"Name": "User Volume",
+			"UUID": "com.caviarthecatgirl.user-volume.volume",
+			"Icon": "imgs/actions/user-volume/icon",
+			"Tooltip": "One person's Discord volume. Key: hold = up, double-tap and hold = down. Dial: turn to set.",
+			"PropertyInspectorPath": "ui/user-volume.html",
+			"SupportedInMultiActions": false,
+			"DisableAutomaticStates": true,
+			"Controllers": [
+				"Keypad",
+				"Encoder"
+			],
+			"Encoder": {
+				"layout": "layouts/user-volume.json",
+				"Icon": "imgs/actions/user-volume/icon",
+				"TriggerDescription": {
+					"Rotate": "Volume (faster = bigger steps)",
+					"Push": "Mute · hold: 100 %",
+					"Touch": "Mute · hold: 100 %",
+					"LongTouch": "100 %"
+				}
+			},
+			"States": [
+				{
+					"Image": "imgs/actions/user-volume/key",
+					"TitleAlignment": "bottom"
+				}
+			]
+		}
+	],
+	"Category": "Discord",
+	"CategoryIcon": "imgs/plugin/category-icon",
+	"CodePath": "bin/plugin.js",
+	"Description": "Control one person's Discord volume (up to Vencord's VolumeBooster limit) from a key or a Stream Deck + dial, with their avatar and live volume. Needs the UserVolumeDeck Vencord plugin.",
+	"Icon": "imgs/plugin/marketplace",
+	"SDKVersion": 3,
+	"Software": {
+		"MinimumVersion": "6.9"
+	},
+	"OS": [
+		{
+			"Platform": "mac",
+			"MinimumVersion": "12"
+		},
+		{
+			"Platform": "windows",
+			"MinimumVersion": "10"
+		}
+	],
+	"Nodejs": {
+		"Version": "20",
+		"Debug": "enabled"
+	},
+	"UUID": "com.caviarthecatgirl.user-volume"
+}

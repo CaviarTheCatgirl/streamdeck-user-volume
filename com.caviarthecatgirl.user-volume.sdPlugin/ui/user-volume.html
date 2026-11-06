@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+<meta charset="utf-8" />
+<title>User Volume</title>
+<style>
+    :root { --bg: #2d2d2d; --card: #3a3a3a; --line: #4a4a4a; --text: #d0d0d0; --dim: #9a9a9a; --accent: #5865f2; --green: #3ba55d; --red: #ed4245; --amber: #faa61a; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 12px 14px 20px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 12px; color: var(--text); background: var(--bg); }
+    h3 { margin: 16px 0 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--dim); }
+    .status { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 6px; background: var(--card); }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--amber); flex: none; }
+    .dot.on { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .dot.off { background: var(--red); }
+    .status .txt { flex: 1; line-height: 1.4; }
+    .status .txt small { display: block; color: var(--dim); }
+    .person { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 8px; background: var(--card); }
+    .av { width: 40px; height: 40px; border-radius: 50%; background: var(--accent); flex: none; object-fit: cover; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; overflow: hidden; }
+    .av.sm { width: 28px; height: 28px; font-size: 11px; }
+    .person .who { flex: 1; min-width: 0; }
+    .person .name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .person .sub { color: var(--dim); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    button { font: inherit; color: var(--text); background: #4a4a4a; border: 1px solid #555; border-radius: 4px; padding: 5px 10px; cursor: pointer; }
+    button:hover { background: #555; }
+    button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    input[type=text], input[type=number], select { font: inherit; color: var(--text); background: #242424; border: 1px solid var(--line); border-radius: 4px; padding: 5px 7px; width: 100%; }
+    input:focus, select:focus { outline: 1px solid var(--accent); }
+    .picker { margin-top: 8px; }
+    .searchrow { display: flex; gap: 6px; }
+    .list { margin-top: 6px; max-height: 300px; overflow-y: auto; border-radius: 6px; background: #262626; }
+    .group { padding: 6px 8px 3px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--dim); position: sticky; top: 0; background: #262626; }
+    .row { display: flex; align-items: center; gap: 8px; padding: 5px 8px; cursor: pointer; }
+    .row:hover { background: #333; }
+    .row.sel { background: rgba(88, 101, 242, .25); }
+    .row .t { flex: 1; min-width: 0; }
+    .row .n { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .row .u { color: var(--dim); font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .row .v { color: var(--dim); font-variant-numeric: tabular-nums; }
+    .row .v.m { color: var(--red); }
+    .chip { display: inline-block; padding: 0 5px; margin-left: 4px; border-radius: 3px; font-size: 9px; font-weight: 700; background: #444; color: #ccc; vertical-align: 1px; }
+    .chip.call { background: var(--green); color: #fff; }
+    .empty { padding: 12px; color: var(--dim); text-align: center; line-height: 1.5; }
+    .field { display: grid; grid-template-columns: 112px 1fr; align-items: center; gap: 8px; margin: 7px 0; }
+    .field label { color: var(--text); }
+    .range { display: flex; align-items: center; gap: 8px; }
+    .range input { flex: 1; accent-color: var(--accent); }
+    .range span { width: 52px; text-align: right; color: var(--dim); font-variant-numeric: tabular-nums; }
+    .check { display: flex; align-items: center; gap: 8px; margin: 7px 0; cursor: pointer; }
+    .check input { accent-color: var(--accent); }
+    .hint { color: var(--dim); line-height: 1.5; margin: 6px 0 0; }
+    .err { color: var(--red); margin-top: 6px; }
+    .hidden { display: none !important; }
+    details summary { cursor: pointer; color: var(--dim); margin-top: 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+</style>
+</head>
+<body>
+    <div class="status"><span class="dot" id="dot"></span><span class="txt" id="statusTxt">Connecting…</span><button id="retry" title="Reconnect">↻</button></div>
+
+    <h3>Person</h3>
+    <div class="person" id="person">
+        <div class="av" id="pAv">?</div>
+        <div class="who"><div class="name" id="pName">Nobody picked yet</div><div class="sub" id="pSub">Choose someone below</div></div>
+        <button id="change">Change</button>
+    </div>
+
+    <div class="picker" id="picker">
+        <div class="searchrow">
+            <input type="text" id="search" placeholder="Search name, or paste a user ID" autocomplete="off" spellcheck="false" />
+            <button id="refresh" title="Refresh suggestions">↻</button>
+        </div>
+        <div class="list" id="list"><div class="empty">Loading suggestions…</div></div>
+        <p class="hint">Not listed? Paste their user ID above (Discord: Settings → Advanced → Developer Mode, then right-click the person → Copy User ID).</p>
+        <div class="err hidden" id="pickErr"></div>
+    </div>
+
+    <h3>Audio</h3>
+    <div class="field"><label for="context">Controls</label>
+        <select id="context" data-setting="context">
+            <option value="default">Their voice</option>
+            <option value="stream">Their Go Live stream audio</option>
+        </select>
+    </div>
+
+    <section id="keySection">
+        <h3>Key</h3>
+        <label class="check"><input type="checkbox" data-setting="showName" /> Show their name on the key</label>
+        <div class="field"><label for="tapAction">Tap</label>
+            <select id="tapAction" data-setting="tapAction"><option value="mute">Mute / unmute</option><option value="reset">Reset to 100 %</option><option value="none">Nothing</option></select></div>
+        <div class="field"><label for="doubleTapAction">Double tap</label>
+            <select id="doubleTapAction" data-setting="doubleTapAction"><option value="reset">Reset to 100 %</option><option value="mute">Mute / unmute</option><option value="none">Nothing</option></select></div>
+        <p class="hint">Hold = volume up. Double-tap and keep holding the second tap = volume down.</p>
+        <div class="field"><label>Hold: start speed</label><div class="range"><input type="range" min="1" max="40" step="1" data-setting="rampStart" data-unit=" %/s" /><span></span></div></div>
+        <div class="field"><label>Hold: top speed</label><div class="range"><input type="range" min="10" max="200" step="5" data-setting="rampTop" data-unit=" %/s" /><span></span></div></div>
+        <div class="field"><label>Reaches top after</label><div class="range"><input type="range" min="0" max="6" step="0.5" data-setting="rampAccel" data-unit=" s" /><span></span></div></div>
+        <label class="check"><input type="checkbox" data-setting="keyDetent" /> Stop briefly at 100 % while holding</label>
+        <details>
+            <summary>Timing</summary>
+            <div class="field"><label>Hold starts after</label><div class="range"><input type="range" min="150" max="800" step="25" data-setting="holdDelay" data-unit=" ms" /><span></span></div></div>
+            <div class="field"><label>Double-tap window</label><div class="range"><input type="range" min="150" max="700" step="25" data-setting="doubleTapWindow" data-unit=" ms" /><span></span></div></div>
+        </details>
+    </section>
+
+    <section id="dialSection">
+        <h3>Dial</h3>
+        <div class="field"><label>Step per click</label><div class="range"><input type="range" min="0.5" max="10" step="0.5" data-setting="dialStep" data-unit=" %" /><span></span></div></div>
+        <div class="field"><label for="dialAccel">Acceleration</label>
+            <select id="dialAccel" data-setting="dialAccel"><option value="off">Off (always the same step)</option><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option></select></div>
+        <div class="field"><label>Turn while pressed</label><div class="range"><input type="range" min="1" max="50" step="1" data-setting="dialPressedStep" data-unit=" %" /><span></span></div></div>
+        <label class="check"><input type="checkbox" data-setting="dialDetent" /> Stop briefly at 100 % while turning</label>
+        <div class="field"><label for="dialPress">Press</label>
+            <select id="dialPress" data-setting="dialPress"><option value="mute">Mute / unmute</option><option value="reset">Reset to 100 %</option><option value="none">Nothing</option></select></div>
+        <div class="field"><label for="dialLongPress">Long press</label>
+            <select id="dialLongPress" data-setting="dialLongPress"><option value="reset">Reset to 100 %</option><option value="mute">Mute / unmute</option><option value="none">Nothing</option></select></div>
+        <div class="field"><label for="touchTap">Touch tap</label>
+            <select id="touchTap" data-setting="touchTap"><option value="mute">Mute / unmute</option><option value="reset">Reset to 100 %</option><option value="none">Nothing</option></select></div>
+        <div class="field"><label for="touchHold">Touch hold</label>
+            <select id="touchHold" data-setting="touchHold"><option value="reset">Reset to 100 %</option><option value="mute">Mute / unmute</option><option value="none">Nothing</option></select></div>
+    </section>
+
+    <details>
+        <summary>Connection</summary>
+        <div class="field"><label for="port">Port</label><input type="number" id="port" min="1025" max="65535" /></div>
+        <p class="hint">Must match the port in Discord → Vencord → Plugins → UserVolumeDeck (default 37321).</p>
+    </details>
+
+<script>
+    const DEFAULTS = {
+        context: "default", showName: false, tapAction: "mute", doubleTapAction: "reset",
+        rampStart: 5, rampTop: 40, rampAccel: 2.5, holdDelay: 300, doubleTapWindow: 300, keyDetent: true,
+        dialStep: 1, dialAccel: "normal", dialPressedStep: 10, dialPress: "mute", dialLongPress: "reset",
+        touchTap: "mute", touchHold: "reset", dialDetent: true
+    };
+    const TAG = { call: "In call", adjusted: "Adjusted", frequent: "Frequent", dm: "DM", friend: "Friend" };
+    const GROUPS = [["call", "In your call"], ["adjusted", "Volume already changed"], ["frequent", "You talk to most"], ["dm", "Recent DMs"], ["friend", "Friends"]];
+    const ID_RE = /^\d{15,22}$/;
+
+    let ws = null, uuid = null, actionUUID = null, settings = {}, controller = "Keypad";
+    let users = [], max = 200, online = false, pickerOpen = false, lookupPending = null;
+    const $ = id => document.getElementById(id);
+    const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" })[c]);
+    const initials = n => (String(n || "?").trim().split(/\s+/).map(w => w[0]).join("").slice(0, 2) || "?").toUpperCase();
+    const avatar = (u, cls) => u && u.avatar ? `<img class="av ${cls}" src="${esc(u.avatar)}" alt="">` : `<div class="av ${cls}">${esc(initials(u && u.name))}</div>`;
+
+    function send(obj) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
+    function toPlugin(payload) { send({ event: "sendToPlugin", action: actionUUID, context: uuid, payload }); }
+    function save() { send({ event: "setSettings", context: uuid, payload: settings }); }
+    const val = k => settings[k] === undefined ? DEFAULTS[k] : settings[k];
+
+    // eslint-disable-next-line no-unused-vars
+    function connectElgatoStreamDeckSocket(port, inUUID, registerEvent, info, inActionInfo) {
+        uuid = inUUID;
+        const ai = JSON.parse(inActionInfo);
+        actionUUID = ai.action;
+        settings = (ai.payload && ai.payload.settings) || {};
+        controller = (ai.payload && ai.payload.controller) || "Keypad";
+        ws = new WebSocket("ws://127.0.0.1:" + port);
+        ws.onopen = () => {
+            send({ event: registerEvent, uuid });
+            send({ event: "getGlobalSettings", context: uuid });
+            toPlugin({ type: "status" });
+            toPlugin({ type: "suggestions" });
+        };
+        ws.onmessage = e => {
+            const m = JSON.parse(e.data);
+            if (m.event === "sendToPropertyInspector") onPlugin(m.payload || {});
+            else if (m.event === "didReceiveSettings") { settings = m.payload.settings || {}; renderAll(); }
+            else if (m.event === "didReceiveGlobalSettings") { $("port").value = (m.payload.settings && m.payload.settings.port) || 37321; }
+        };
+        renderAll();
+        setInterval(() => toPlugin({ type: "status" }), 3000);
+        setInterval(() => { if (online) toPlugin({ type: "suggestions" }); }, 15000);
+    }
+
+    function onPlugin(p) {
+        if (p.type === "status") {
+            const was = online;
+            online = p.status === "online";
+            if (p.info && p.info.max) max = p.info.max;
+            $("dot").className = "dot " + (online ? "on" : "off");
+            $("statusTxt").innerHTML = online
+                ? `Connected to Discord<small>Max volume ${Math.round(max)} %${p.info && p.info.scale === "linear" ? " · linear scale" : ""}</small>`
+                : `Discord not reachable<small>Start Discord and enable UserVolumeDeck in Vencord (port ${esc(p.port)})</small>`;
+            if (online && !was) toPlugin({ type: "suggestions" });
+            if (!$("port").value) $("port").value = p.port;
+        } else if (p.type === "suggestions") {
+            if (p.ok) { users = p.data.users || []; if (p.data.max) max = p.data.max; }
+            renderList(p.ok ? null : p.error);
+            renderPerson();
+        } else if (p.type === "lookup") {
+            if (!p.ok) return showErr(p.error);
+            const u = p.data;
+            if (!u.known) return showErr(`No Discord user with ID ${u.id}`);
+            if (lookupPending === u.id) choose(u);
+        }
+    }
+
+    function showErr(msg) {
+        lookupPending = null;
+        $("pickErr").textContent = msg;
+        $("pickErr").classList.toggle("hidden", !msg);
+    }
+
+    function choose(u) {
+        lookupPending = null;
+        showErr("");
+        settings.userId = u.id;
+        settings.userName = u.name;
+        settings.userAvatar = u.avatar || "";
+        settings.userUsername = u.username || "";
+        save();
+        if (!users.some(x => x.id === u.id)) users.unshift({ ...u, tags: [] });
+        pickerOpen = false;
+        $("search").value = "";
+        renderAll();
+    }
+
+    function renderPerson() {
+        const id = settings.userId;
+        const live = users.find(u => u.id === id);
+        const u = live || (id ? { id, name: settings.userName || id, username: settings.userUsername, avatar: settings.userAvatar } : null);
+        $("pAv").outerHTML = u ? avatar(u, "").replace('class="av ', 'id="pAv" class="av ') : '<div class="av" id="pAv">?</div>';
+        $("pName").textContent = u ? u.name : "Nobody picked yet";
+        $("pSub").textContent = u
+            ? [u.username ? "@" + u.username : null, live ? (live.muted ? "muted" : `${live.volume} %`) : null, u.id].filter(Boolean).join(" · ")
+            : "Choose someone below";
+        $("change").classList.toggle("hidden", !id);
+        $("picker").classList.toggle("hidden", !!id && !pickerOpen);
+        $("change").textContent = pickerOpen ? "Done" : "Change";
+    }
+
+    function row(u) {
+        const tags = (u.tags || []).filter(t => t !== "friend").map(t => `<span class="chip ${t}">${esc(TAG[t] || t)}</span>`).join("");
+        const vol = u.muted ? `<span class="v m">muted</span>` : `<span class="v">${esc(u.volume)} %</span>`;
+        return `<div class="row ${u.id === settings.userId ? "sel" : ""}" data-id="${esc(u.id)}">${avatar(u, "sm")}
+            <div class="t"><div class="n">${esc(u.name)}${tags}</div><div class="u">${u.username ? "@" + esc(u.username) : esc(u.id)}</div></div>${vol}</div>`;
+    }
+
+    function renderList(error) {
+        const q = $("search").value.trim().toLowerCase();
+        const list = $("list");
+        if (error) { list.innerHTML = `<div class="empty">${esc(error)}</div>`; return; }
+        if (!online && !users.length) { list.innerHTML = `<div class="empty">Suggestions appear once Discord is connected.<br>You can still paste a user ID.</div>`; }
+        let html = "";
+        if (ID_RE.test(q) && !users.some(u => u.id === q)) {
+            html += `<div class="row" data-lookup="${esc(q)}"><div class="av sm">ID</div><div class="t"><div class="n">Use user ID ${esc(q)}</div><div class="u">Looks the person up in Discord</div></div></div>`;
+        }
+        const match = u => !q || u.id === q || (u.name || "").toLowerCase().includes(q) || (u.username || "").toLowerCase().includes(q);
+        const seen = new Set();
+        for (const [tag, title] of GROUPS) {
+            const rows = users.filter(u => !seen.has(u.id) && (u.tags || []).includes(tag) && match(u));
+            // Without a search, keep the list short: friends only show when searching.
+            const shown = tag === "friend" && !q ? [] : rows.slice(0, q ? 50 : 15);
+            if (!shown.length) continue;
+            shown.forEach(u => seen.add(u.id));
+            html += `<div class="group">${esc(title)}</div>` + shown.map(row).join("");
+        }
+        if (!html && (online || users.length)) html = `<div class="empty">${q ? "Nobody found. Paste their user ID instead." : "No suggestions yet. Search your friends or paste a user ID."}</div>`;
+        if (html) list.innerHTML = html;
+    }
+
+    function renderFields() {
+        document.querySelectorAll("[data-setting]").forEach(el => {
+            const k = el.dataset.setting, v = val(k);
+            if (el.type === "checkbox") el.checked = !!v;
+            else el.value = v;
+            if (el.type === "range") el.nextElementSibling.textContent = v + (el.dataset.unit || "");
+        });
+        $("keySection").classList.toggle("hidden", controller !== "Keypad");
+        $("dialSection").classList.toggle("hidden", controller !== "Encoder");
+    }
+
+    function renderAll() { renderFields(); renderPerson(); renderList(); }
+
+    // ── events ──
+    document.querySelectorAll("[data-setting]").forEach(el => {
+        const k = el.dataset.setting;
+        const read = () => el.type === "checkbox" ? el.checked : el.type === "range" ? Number(el.value) : el.value;
+        el.addEventListener("input", () => {
+            if (el.type === "range") el.nextElementSibling.textContent = el.value + (el.dataset.unit || "");
+        });
+        el.addEventListener("change", () => { settings[k] = read(); save(); });
+    });
+    $("search").addEventListener("input", () => { showErr(""); renderList(); });
+    $("search").addEventListener("keydown", e => {
+        if (e.key !== "Enter") return;
+        const q = $("search").value.trim();
+        if (ID_RE.test(q)) lookup(q);
+    });
+    $("list").addEventListener("click", e => {
+        const r = e.target.closest(".row");
+        if (!r) return;
+        if (r.dataset.lookup) return lookup(r.dataset.lookup);
+        const u = users.find(x => x.id === r.dataset.id);
+        if (u) choose(u);
+    });
+    $("change").addEventListener("click", () => { pickerOpen = !pickerOpen; if (pickerOpen) toPlugin({ type: "suggestions" }); renderPerson(); if (pickerOpen) $("search").focus(); });
+    $("refresh").addEventListener("click", () => toPlugin({ type: "suggestions" }));
+    $("retry").addEventListener("click", () => toPlugin({ type: "reconnect" }));
+    $("port").addEventListener("change", () => {
+        const p = Number($("port").value);
+        if (Number.isInteger(p) && p > 1024 && p < 65536) toPlugin({ type: "setPort", port: p });
+    });
+
+    function lookup(id) {
+        if (!online) return showErr("Discord isn't connected, so the ID can't be looked up right now.");
+        showErr("");
+        lookupPending = id;
+        $("list").insertAdjacentHTML("afterbegin", `<div class="empty">Looking up ${esc(id)}…</div>`);
+        toPlugin({ type: "lookup", id });
+    }
+</script>
+</body>
+</html>
