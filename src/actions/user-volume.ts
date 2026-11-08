@@ -121,6 +121,8 @@ const DIAL_RATE_WINDOW_MS = 300;
 const DIAL_MAX_MULT = 10;
 const ACCEL_K = { off: 0, low: 0.5, normal: 1, high: 2 } as const;
 const MIN_DRAW_MS = 40;
+/** Remembered pictures (see `last`), most recent kept. */
+const LAST_MAX = 200;
 
 // ── per-instance state ──────────────────────────────────────────────────────
 
@@ -170,6 +172,14 @@ interface Inst {
 @action({ UUID: "com.caviarthecatgirl.user-volume.volume" })
 export class UserVolumeAction extends SingletonAction<Settings> {
     private insts = new Map<string, Inst>();
+    /**
+     * The last picture of every action, kept when it disappears (page / profile switch).
+     * Coming back, Stream Deck creates the action anew: without this it drew "Loading…" until
+     * Discord sent the picture again a moment later — the short flash on every return.
+     * Now the remembered picture is drawn at once; Discord's fresh one replaces it if different.
+     * Only reused for the same user, context, look and controller (`lastKey`).
+     */
+    private last = new Map<string, { key: string; image: string; state: ViewState | null; }>();
 
     constructor() {
         super();
@@ -226,7 +236,25 @@ export class UserVolumeAction extends SingletonAction<Settings> {
             rotatedWhilePressed: false
         };
         this.insts.set(inst.id, inst);
-        this.applySettings(inst);
+        const prev = this.last.get(inst.id);
+        if (prev && prev.key === this.lastKey(inst)) {
+            inst.image = prev.image;
+            inst.state = prev.state;
+        }
+        // Drawn right away (not on the next timer tick): the key shows its picture as early as
+        // possible after Stream Deck put it on screen.
+        this.applySettings(inst, true);
+    }
+
+    private lastKey(inst: Inst): string {
+        return `${inst.s.userId}|${inst.s.context}|${inst.s.showName}|${inst.dial ? "dial" : "key"}`;
+    }
+
+    private remember(inst: Inst): void {
+        if (!inst.image || !inst.s.userId) return;
+        this.last.delete(inst.id); // re-insert = most recent
+        this.last.set(inst.id, { key: this.lastKey(inst), image: inst.image, state: inst.state });
+        while (this.last.size > LAST_MAX) this.last.delete(this.last.keys().next().value!);
     }
 
     override onWillDisappear(ev: WillDisappearEvent<Settings>): void {
@@ -234,6 +262,7 @@ export class UserVolumeAction extends SingletonAction<Settings> {
         if (!inst) return;
         this.stopGestures(inst);
         if (inst.drawTimer) clearTimeout(inst.drawTimer);
+        this.remember(inst);
         bridge.removeView(inst.id);
         this.insts.delete(inst.id);
     }
@@ -251,7 +280,7 @@ export class UserVolumeAction extends SingletonAction<Settings> {
         this.applySettings(inst);
     }
 
-    private applySettings(inst: Inst): void {
+    private applySettings(inst: Inst, now = false): void {
         const s = inst.s;
         if (s.userId) {
             bridge.setView({ id: inst.id, userId: s.userId, context: s.context, kind: inst.dial ? "strip" : "key", look: { showName: s.showName } });
@@ -267,7 +296,7 @@ export class UserVolumeAction extends SingletonAction<Settings> {
                 longTouch: label(s.touchHold)
             }).catch(() => { });
         }
-        this.draw(inst);
+        this.draw(inst, now);
     }
 
     // ── drawing ─────────────────────────────────────────────────────────────
@@ -278,11 +307,10 @@ export class UserVolumeAction extends SingletonAction<Settings> {
         return inst.image ?? loadingImage(inst.s.userName, inst.dial);
     }
 
-    /** Coalesced: at most one image per MIN_DRAW_MS, always the newest. */
-    private draw(inst: Inst): void {
-        if (inst.drawTimer) return;
-        const wait = Math.max(0, inst.lastDraw + MIN_DRAW_MS - Date.now());
-        inst.drawTimer = setTimeout(() => {
+    /** Coalesced: at most one image per MIN_DRAW_MS, always the newest. `now`: draw at once
+     *  (the first picture after the action appeared). */
+    private draw(inst: Inst, now = false): void {
+        const paint = () => {
             inst.drawTimer = null;
             if (!this.insts.has(inst.id)) return;
             const img = this.imageFor(inst);
@@ -293,7 +321,15 @@ export class UserVolumeAction extends SingletonAction<Settings> {
                 ? inst.action.setImage(img)
                 : (inst.action as DialAction<Settings>).setFeedback({ canvas: img });
             p.catch(e => streamDeck.logger.warn(`Drawing failed: ${e?.message ?? e}`));
-        }, wait);
+        };
+        if (now) {
+            if (inst.drawTimer) clearTimeout(inst.drawTimer);
+            paint();
+            return;
+        }
+        if (inst.drawTimer) return;
+        const wait = Math.max(0, inst.lastDraw + MIN_DRAW_MS - Date.now());
+        inst.drawTimer = setTimeout(paint, wait);
     }
 
     // ── commands ────────────────────────────────────────────────────────────

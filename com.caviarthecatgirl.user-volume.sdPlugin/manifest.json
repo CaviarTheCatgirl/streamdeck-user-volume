@@ -1,7 +1,9 @@
 {
 	"Name": "Discord User Volume",
-	"Version": "1.0.0.0",
+	"Version": "1.1.0.0",
 	"Author": "CaviarTheCatgirl",
+	"Description": "Control one person's Discord volume (up to Vencord's VolumeBooster limit) from a key or a Stream Deck + dial, with their avatar and live volume. Needs the UserVolumeDeck Vencord plugin.",
+	"UUID": "com.caviarthecatgirl.user-volume",
 	"Actions": [
 		{
 			"Name": "User Volume",
@@ -36,7 +38,6 @@
 	"Category": "Discord",
 	"CategoryIcon": "imgs/plugin/category-icon",
 	"CodePath": "bin/plugin.js",
-	"Description": "Control one person's Discord volume (up to Vencord's VolumeBooster limit) from a key or a Stream Deck + dial, with their avatar and live volume. Needs the UserVolumeDeck Vencord plugin.",
 	"Icon": "imgs/plugin/marketplace",
 	"SDKVersion": 3,
 	"Software": {
@@ -55,6 +56,5 @@
 	"Nodejs": {
 		"Version": "20",
 		"Debug": "enabled"
-	},
-	"UUID": "com.caviarthecatgirl.user-volume"
+	}
 }
