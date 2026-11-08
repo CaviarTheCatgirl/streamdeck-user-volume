@@ -577,7 +577,7 @@ export class UserVolumeAction extends SingletonAction<Settings> {
     }
 
     override async onSendToPlugin(ev: SendToPluginEvent<JsonValue, Settings>): Promise<void> {
-        const msg = (ev.payload ?? {}) as { type?: string; id?: string; port?: number; };
+        const msg = (ev.payload ?? {}) as { type?: string; id?: string; ids?: unknown; port?: number; };
         const reply = (p: Record<string, JsonValue>) => streamDeck.ui.sendToPropertyInspector(p);
         try {
             switch (msg.type) {
@@ -591,6 +591,23 @@ export class UserVolumeAction extends SingletonAction<Settings> {
                     const id = String(msg.id ?? "");
                     const data = await bridge.request("GET", `/user?id=${encodeURIComponent(id)}`, undefined, 8000);
                     return await reply({ type: "lookup", ok: true, data });
+                }
+                case "adjusted": {
+                    const data = await bridge.request("GET", "/adjusted", undefined, 8000);
+                    return await reply({ type: "adjusted", ok: true, data });
+                }
+                case "forget": {
+                    const ids = Array.isArray(msg.ids) ? msg.ids.map(String).slice(0, 1000) : [];
+                    const data = await bridge.request("POST", "/forget", { ids }, 8000);
+                    await reply({ type: "forget", ok: true, data, ids });
+                    // The lists changed: send fresh ones right away.
+                    const [suggestions, adjusted] = await Promise.allSettled([
+                        bridge.request("GET", "/suggestions"),
+                        bridge.request("GET", "/adjusted", undefined, 8000)
+                    ]);
+                    if (suggestions.status === "fulfilled") await reply({ type: "suggestions", ok: true, data: suggestions.value });
+                    if (adjusted.status === "fulfilled") await reply({ type: "adjusted", ok: true, data: adjusted.value });
+                    return;
                 }
                 case "setPort": {
                     const port = Number(msg.port);

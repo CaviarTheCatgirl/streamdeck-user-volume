@@ -6,7 +6,7 @@ This is the **Stream Deck side**. It needs the [Vencord User Volume Deck](https:
 
 ![Stream Deck](https://img.shields.io/badge/Stream%20Deck-Plugin-blue)
 ![Stream Deck +](https://img.shields.io/badge/Stream%20Deck%20%2B-dials-blueviolet)
-![Version](https://img.shields.io/badge/version-1.0.0-green)
+![Version](https://img.shields.io/badge/version-1.2.0-green)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
 ![Keys: avatar, volume ring and volume](docs/keys.png)
@@ -24,6 +24,7 @@ This is the **Stream Deck side**. It needs the [Vencord User Volume Deck](https:
 - 🚀 **Up to your boost limit**: 200 % × Vencord VolumeBooster's multiplier (e.g. 400 %)
 - 🔇 **Mute, reset and more** on tap, double-tap, dial press and touch: all configurable
 - 👥 **Pick people easily**: suggestions from your call, your most-talked-to people, recent DMs and friends, or paste any user ID
+- 🧹 **Clean up old entries**: remove deleted accounts and people you don't talk to anymore from "Volume already changed"
 - 📺 **Go Live audio** too: control someone's stream volume instead of their voice
 
 ## Requirements
@@ -97,7 +98,7 @@ Crossing 100 % while turning snaps there briefly. Keep turning past it a moment 
 
 | Setting | What it does |
 |---|---|
-| **Person** | Who this key / dial controls. Suggestions are grouped: *In your call*, *Volume already changed*, *You talk to most*, *Recent DMs*; search also finds your friends. |
+| **Person** | Who this key / dial controls. Suggestions are grouped: *In your call*, *Volume already changed*, *You talk to most*, *Recent DMs*; search also finds your friends. Hover a row under *Volume already changed* and click ✕ twice to remove that person, or use **Clean up…** (see below). |
 | **Controls** | *Their voice*, or *Their Go Live stream audio*. |
 
 ### Key
@@ -132,6 +133,16 @@ Crossing 100 % while turning snaps there briefly. Keep turning past it a moment 
 | Setting | Default |
 |---|---|
 | **Port** | `37321`. Must match the Vencord plugin's *Port* setting |
+
+## Cleaning up "Volume already changed"
+
+Everyone whose volume you ever changed stays on that list, including deleted accounts and people you lost touch with. Click **Clean up…** next to the group title:
+
+- Every entry shows badges: **Deleted**, **Unknown** (Discord doesn't know that ID any more), **Friend**, **DM**, **In call**, plus their voice and Go Live volume.
+- Quick selects: **Deleted & unknown**, **No friend, no DM**, **All**, **None**, or tick people yourself.
+- **Reset & remove** (click twice) sets them back to 100 % and unmuted, for voice and Go Live. That's what takes them off the list; you can always set a volume again later.
+
+Needs the UserVolumeDeck Vencord plugin **1.1.0** or newer. With an older one the panel tells you to update.
 
 ## Troubleshooting
 
@@ -255,6 +266,14 @@ MIT
 - 💡 **Feature requests**: [Open an issue](https://github.com/CaviarTheCatgirl/streamdeck-user-volume/issues)
 
 ## Changelog
+
+### v1.2.0
+
+- 🧹 **Clean up "Volume already changed"**: ✕ on each row, plus a clean-up list that finds deleted and unknown accounts and people you have no friendship or DM with. Removing resets them to 100 % and unmuted (voice and Go Live). Needs UserVolumeDeck 1.1.0 in Discord.
+
+### v1.1.0
+
+- 🖼️ **No more flash when switching back to a page.** Keys and dials kept briefly showing their "Loading…" picture before the user's avatar and volume came back. They now show the user and volume straight away.
 
 ### v1.0.0 (initial release)
 

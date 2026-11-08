@@ -50,6 +50,30 @@
     .hint { color: var(--dim); line-height: 1.5; margin: 6px 0 0; }
     .err { color: var(--red); margin-top: 6px; }
     .hidden { display: none !important; }
+    .group .glink { float: right; text-transform: none; letter-spacing: 0; font-weight: 600; color: var(--accent); cursor: pointer; }
+    .group .glink:hover { text-decoration: underline; }
+    .row .x { flex: none; width: 22px; height: 22px; padding: 0; line-height: 20px; text-align: center; font-size: 13px; color: var(--dim); background: transparent; border-color: transparent; opacity: 0; }
+    .row:hover .x, .row .x.armed { opacity: 1; }
+    .row .x:hover { color: var(--red); background: #3a2a2a; border-color: #5a3434; }
+    .row .x.armed { width: auto; padding: 0 6px; font-size: 10px; font-weight: 700; color: #fff; background: var(--red); border-color: var(--red); }
+    .chip.gone { background: var(--red); color: #fff; }
+    .chip.wait { background: #444; color: var(--dim); }
+    .chip.me { background: var(--accent); color: #fff; }
+    .cleanup { margin-top: 8px; padding: 10px; border-radius: 8px; background: var(--card); }
+    .cuHead { display: flex; align-items: center; gap: 8px; }
+    .cuHead b { flex: 1; font-size: 12px; }
+    .cuTools { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 8px; color: var(--dim); }
+    .cuTools button { padding: 2px 7px; font-size: 11px; }
+    .cuState { margin-top: 6px; color: var(--dim); min-height: 15px; }
+    .cleanup .list { max-height: 260px; }
+    .cleanup .row { cursor: default; }
+    .cleanup .row input { accent-color: var(--red); flex: none; margin: 0; }
+    .cuFoot { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+    .cuFoot span { flex: 1; color: var(--dim); }
+    button.danger { background: #5a3434; border-color: #7a3c3c; color: #fff; }
+    button.danger:hover:not(:disabled) { background: var(--red); border-color: var(--red); }
+    button.danger.armed { background: var(--red); border-color: var(--red); }
+    button:disabled { opacity: .45; cursor: default; }
     details summary { cursor: pointer; color: var(--dim); margin-top: 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
 </style>
 </head>
@@ -71,6 +95,20 @@
         <div class="list" id="list"><div class="empty">Loading suggestions…</div></div>
         <p class="hint">Not listed? Paste their user ID above (Discord: Settings → Advanced → Developer Mode, then right-click the person → Copy User ID).</p>
         <div class="err hidden" id="pickErr"></div>
+
+        <div class="cleanup hidden" id="cleanup">
+            <div class="cuHead"><b>Clean up “Volume already changed”</b><button id="cuClose">Done</button></div>
+            <p class="hint">Removing someone resets them to 100 % and unmutes them (voice and Go Live), the same as moving Discord’s slider back. That takes them off the list. You can always set a volume again.</p>
+            <div class="cuTools">Select:
+                <button data-sel="gone" title="Accounts that were deleted, or that Discord doesn't know">Deleted &amp; unknown</button>
+                <button data-sel="stranger" title="Not your friend and no DM with them">No friend, no DM</button>
+                <button data-sel="all">All</button>
+                <button data-sel="none">None</button>
+            </div>
+            <div class="cuState" id="cuState"></div>
+            <div class="list" id="cuList"></div>
+            <div class="cuFoot"><span id="cuCount"></span><button class="danger" id="cuGo" disabled>Reset &amp; remove</button></div>
+        </div>
     </div>
 
     <h3>Audio</h3>
@@ -136,6 +174,11 @@
 
     let ws = null, uuid = null, actionUUID = null, settings = {}, controller = "Keypad";
     let users = [], max = 200, online = false, pickerOpen = false, lookupPending = null;
+    // clean-up panel
+    let cuOpen = false, cuNote = "", cuEntries = [], cuChecking = 0, cuSel = new Set(), cuTimer = null, cuArmTimer = null, cuBusy = false;
+    let forgetArmed = null, forgetArmTimer = null;
+    const NEEDS_UPDATE = "Needs UserVolumeDeck 1.1.0 or newer in Discord. Update the Vencord plugin, rebuild Vencord and restart Discord.";
+    const friendlyErr = e => /not found/i.test(String(e || "")) ? NEEDS_UPDATE : String(e || "Something went wrong");
     const $ = id => document.getElementById(id);
     const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" })[c]);
     const initials = n => (String(n || "?").trim().split(/\s+/).map(w => w[0]).join("").slice(0, 2) || "?").toUpperCase();
@@ -186,6 +229,21 @@
             if (p.ok) { users = p.data.users || []; if (p.data.max) max = p.data.max; }
             renderList(p.ok ? null : p.error);
             renderPerson();
+        } else if (p.type === "adjusted") {
+            if (!p.ok) { cuEntries = []; cuChecking = 0; renderCleanup(friendlyErr(p.error)); return; }
+            cuEntries = p.data.entries || [];
+            cuChecking = p.data.checking || 0;
+            const ids = new Set(cuEntries.map(e => e.id));
+            for (const id of [...cuSel]) if (!ids.has(id)) cuSel.delete(id);
+            renderCleanup();
+            scheduleCleanupPoll();
+        } else if (p.type === "forget") {
+            cuBusy = false;
+            if (!p.ok) { renderCleanup(friendlyErr(p.error)); showErr(friendlyErr(p.error)); return; }
+            for (const id of p.ids || []) cuSel.delete(id);
+            const n = (p.data && p.data.forgotten) || 0;
+            cuNote = n ? `Removed ${n} ${n === 1 ? "person" : "people"}` : "Nothing to change";
+            renderCleanup();
         } else if (p.type === "lookup") {
             if (!p.ok) return showErr(p.error);
             const u = p.data;
@@ -228,11 +286,16 @@
         $("change").textContent = pickerOpen ? "Done" : "Change";
     }
 
-    function row(u) {
+    function row(u, forget) {
         const tags = (u.tags || []).filter(t => t !== "friend").map(t => `<span class="chip ${t}">${esc(TAG[t] || t)}</span>`).join("");
         const vol = u.muted ? `<span class="v m">muted</span>` : `<span class="v">${esc(u.volume)} %</span>`;
+        const x = forget
+            ? (forgetArmed === u.id
+                ? `<button class="x armed" data-forget="${esc(u.id)}" title="Click again to reset them to 100 %">Reset?</button>`
+                : `<button class="x" data-forget="${esc(u.id)}" title="Remove from this list (resets them to 100 % and unmutes them)">✕</button>`)
+            : "";
         return `<div class="row ${u.id === settings.userId ? "sel" : ""}" data-id="${esc(u.id)}">${avatar(u, "sm")}
-            <div class="t"><div class="n">${esc(u.name)}${tags}</div><div class="u">${u.username ? "@" + esc(u.username) : esc(u.id)}</div></div>${vol}</div>`;
+            <div class="t"><div class="n">${esc(u.name)}${tags}</div><div class="u">${u.username ? "@" + esc(u.username) : esc(u.id)}</div></div>${vol}${x}</div>`;
     }
 
     function renderList(error) {
@@ -252,7 +315,9 @@
             const shown = tag === "friend" && !q ? [] : rows.slice(0, q ? 50 : 15);
             if (!shown.length) continue;
             shown.forEach(u => seen.add(u.id));
-            html += `<div class="group">${esc(title)}</div>` + shown.map(row).join("");
+            const adjusted = tag === "adjusted";
+            const link = adjusted ? `<span class="glink" data-cleanup="1" title="Remove deleted accounts and people you don't talk to anymore">Clean up…</span>` : "";
+            html += `<div class="group">${esc(title)}${link}</div>` + shown.map(u => row(u, adjusted)).join("");
         }
         if (!html && (online || users.length)) html = `<div class="empty">${q ? "Nobody found. Paste their user ID instead." : "No suggestions yet. Search your friends or paste a user ID."}</div>`;
         if (html) list.innerHTML = html;
@@ -287,18 +352,154 @@
         if (ID_RE.test(q)) lookup(q);
     });
     $("list").addEventListener("click", e => {
+        if (e.target.closest("[data-cleanup]")) return openCleanup(true);
+        const fx = e.target.closest("[data-forget]");
+        if (fx) {
+            e.stopPropagation();
+            const id = fx.dataset.forget;
+            clearTimeout(forgetArmTimer);
+            if (forgetArmed === id) {
+                forgetArmed = null;
+                fx.disabled = true;
+                fx.textContent = "…";
+                toPlugin({ type: "forget", ids: [id] });
+            } else {
+                forgetArmed = id;
+                forgetArmTimer = setTimeout(() => { forgetArmed = null; renderList(); }, 3000);
+                renderList();
+            }
+            return;
+        }
         const r = e.target.closest(".row");
         if (!r) return;
         if (r.dataset.lookup) return lookup(r.dataset.lookup);
         const u = users.find(x => x.id === r.dataset.id);
         if (u) choose(u);
     });
-    $("change").addEventListener("click", () => { pickerOpen = !pickerOpen; if (pickerOpen) toPlugin({ type: "suggestions" }); renderPerson(); if (pickerOpen) $("search").focus(); });
+    $("change").addEventListener("click", () => {
+        pickerOpen = !pickerOpen;
+        if (!pickerOpen && cuOpen) openCleanup(false);
+        if (pickerOpen) toPlugin({ type: "suggestions" });
+        renderPerson();
+        if (pickerOpen) $("search").focus();
+    });
     $("refresh").addEventListener("click", () => toPlugin({ type: "suggestions" }));
     $("retry").addEventListener("click", () => toPlugin({ type: "reconnect" }));
     $("port").addEventListener("change", () => {
         const p = Number($("port").value);
         if (Number.isInteger(p) && p > 1024 && p < 65536) toPlugin({ type: "setPort", port: p });
+    });
+
+    // ── clean-up panel ──
+    const STATUS_CHIP = {
+        deleted: `<span class="chip gone">Deleted</span>`,
+        unknown: `<span class="chip gone">Unknown</span>`,
+        checking: `<span class="chip wait">Checking…</span>`
+    };
+    const isGone = e => e.status === "deleted" || e.status === "unknown";
+    const isStranger = e => !e.friend && !e.dm && !e.inCall;
+
+    function ctxText(c) {
+        if (!c) return null;
+        return c.muted ? "muted" : `${c.volume} %`;
+    }
+
+    function openCleanup(open) {
+        cuOpen = open;
+        clearTimeout(cuTimer);
+        $("cleanup").classList.toggle("hidden", !open);
+        $("list").classList.toggle("hidden", open);
+        $("search").disabled = open;
+        if (open) {
+            $("cuState").textContent = online ? "Loading…" : "Discord isn't connected.";
+            $("cuList").innerHTML = "";
+            if (online) toPlugin({ type: "adjusted" });
+            $("cleanup").scrollIntoView({ block: "nearest" });
+        } else {
+            toPlugin({ type: "suggestions" });
+        }
+        disarmGo();
+    }
+
+    function scheduleCleanupPoll() {
+        clearTimeout(cuTimer);
+        if (cuOpen && cuChecking > 0) cuTimer = setTimeout(() => toPlugin({ type: "adjusted" }), 1500);
+    }
+
+    function cleanupRow(e) {
+        const chips = [STATUS_CHIP[e.status] || "", e.id === settings.userId ? `<span class="chip me">This key</span>` : "",
+            e.inCall ? `<span class="chip call">In call</span>` : "", e.friend ? `<span class="chip">Friend</span>` : "", e.dm ? `<span class="chip">DM</span>` : ""].join("");
+        const vols = [ctxText(e.contexts.default) && "voice " + ctxText(e.contexts.default), ctxText(e.contexts.stream) && "stream " + ctxText(e.contexts.stream)].filter(Boolean).join(" · ");
+        const who = e.username && isGone(e) === false ? "@" + e.username : e.id;
+        return `<label class="row"><input type="checkbox" data-cu="${esc(e.id)}" ${cuSel.has(e.id) ? "checked" : ""}>${avatar(e, "sm")}
+            <div class="t"><div class="n">${esc(e.name)}${chips}</div><div class="u">${esc(who)}${vols ? " · " + esc(vols) : ""}</div></div></label>`;
+    }
+
+    function renderCleanup(error) {
+        if (!cuOpen) return;
+        if (error) {
+            $("cuState").textContent = error;
+            $("cuList").innerHTML = "";
+        } else {
+            // Gone accounts first, then people you have no contact with, then the rest; by name inside.
+            const rank = e => isGone(e) ? 0 : e.status === "checking" ? 1 : isStranger(e) ? 2 : 3;
+            const list = [...cuEntries].sort((a, b) => rank(a) - rank(b) || String(a.name).localeCompare(String(b.name)));
+            const gone = cuEntries.filter(isGone).length;
+            $("cuState").textContent = (cuNote ? cuNote + " ✓ · " : "") + (!cuEntries.length
+                ? "Nobody has a custom volume."
+                : `${cuEntries.length} ${cuEntries.length === 1 ? "person" : "people"}` + (gone ? ` · ${gone} deleted or unknown` : "") + (cuChecking ? ` · checking ${cuChecking} account${cuChecking === 1 ? "" : "s"}…` : ""));
+            $("cuList").innerHTML = list.length ? list.map(cleanupRow).join("") : `<div class="empty">Nothing to clean up.</div>`;
+        }
+        updateGo();
+    }
+
+    function updateGo() {
+        const n = cuSel.size;
+        $("cuCount").textContent = n ? `${n} selected` : "";
+        $("cuGo").disabled = !n || cuBusy;
+        if (!$("cuGo").classList.contains("armed")) $("cuGo").textContent = n ? `Reset & remove ${n}` : "Reset & remove";
+    }
+
+    function disarmGo() {
+        cuNote = "";
+        clearTimeout(cuArmTimer);
+        $("cuGo").classList.remove("armed");
+        updateGo();
+    }
+
+    $("cuClose").addEventListener("click", () => openCleanup(false));
+    $("cuList").addEventListener("change", e => {
+        const id = e.target.dataset && e.target.dataset.cu;
+        if (!id) return;
+        if (e.target.checked) cuSel.add(id); else cuSel.delete(id);
+        disarmGo();
+    });
+    document.querySelector(".cuTools").addEventListener("click", e => {
+        const b = e.target.closest("[data-sel]");
+        if (!b) return;
+        const how = b.dataset.sel;
+        if (how === "none") cuSel.clear();
+        else for (const en of cuEntries) {
+            if (how === "all" || (how === "gone" && isGone(en)) || (how === "stranger" && isStranger(en))) cuSel.add(en.id);
+        }
+        disarmGo();
+        renderCleanup();
+    });
+    $("cuGo").addEventListener("click", () => {
+        const n = cuSel.size;
+        if (!n || cuBusy) return;
+        if (!$("cuGo").classList.contains("armed")) {
+            $("cuGo").classList.add("armed");
+            $("cuGo").textContent = `Click again: reset ${n} to 100 %`;
+            clearTimeout(cuArmTimer);
+            cuArmTimer = setTimeout(disarmGo, 4000);
+            return;
+        }
+        disarmGo();
+        cuBusy = true;
+        updateGo();
+        $("cuState").textContent = `Resetting ${n}…`;
+        toPlugin({ type: "forget", ids: [...cuSel] });
     });
 
     function lookup(id) {
